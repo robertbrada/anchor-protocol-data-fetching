@@ -1,0 +1,16 @@
+{
+  "type": "module",
+  "name": "anchor-query",
+  "version": "1.0.0",
+  "description": "Script that fetches data from Anchor Protocol and computes TVL, Total Deposit and Total Collateral ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@terra-money/terra.js": "^3.0.6",
+    "prom-client": "^14.0.1"
+  }
+}

@@ -1,3 +1,4 @@
-js/node_modules
 .vscode
+.DS_Store
 py/prometheus-venv
+js/node_modules
