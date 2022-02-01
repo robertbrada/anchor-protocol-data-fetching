@@ -20,7 +20,7 @@ Terra Finder: https://finder.terra.money/
 
 `git clone https://github.com/robertbrada/anchor-protocol-data-fetching.git`
 
-`cd anchor-protocol-data-fetching/js`
+`cd anchor-data-fetching/js`
 
 `npm install`
 
@@ -30,7 +30,7 @@ Terra Finder: https://finder.terra.money/
 
 `git clone https://github.com/robertbrada/anchor-protocol-data-fetching.git`
 
-`cd anchor-protocol-data-fetching/py`
+`cd anchor-data-fetching/py`
 
 `pip3 install -r requirements.txt`
 
