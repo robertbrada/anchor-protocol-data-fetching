@@ -1,5 +1,5 @@
 # anchor-protocol-data-fetching
-A single script that queries and computes the following data about Anchor Protocol from on-chain available data:
+A series of script that query and compute the following data about Anchor Protocol from on-chain available data:
 - Total Value Locked (USD)
 - Total Deposit (USD)
 - Total Collateral (USD)
@@ -39,6 +39,9 @@ Prometheus: https://prometheus.io/
 6. Open browser window at http://127.0.0.1:8000/metrics
 
 7. You should see the metrics in Prometheus-compatible format. The values will change when you refresh the window.
+
+<br /> 
+
 
 ## JavaScript version
 
