@@ -1,5 +1,4 @@
 from terra_sdk.client.lcd import AsyncLCDClient
-from prometheus_client import (Gauge)
 import asyncio
 
 # Contract addresses (https://docs.anchorprotocol.com/smart-contracts/deployed-contracts)
@@ -10,13 +9,16 @@ ANCHOR_BETH_CUSTODY_ADDRESS = "terra10cxuzggyvvv44magvrh3thpdnk9cmlgk93gmx2"
 BLUNA_ADDRESS = "terra1kc87mu460fwkqte29rquh4hc20m54fxwtsx7gp"
 BETH_ADDRESS = "terra1dzhzukyezv0etz22ud940z7adyv7xgcjkahuun"
 
-# Connect to columbus network
-terra = AsyncLCDClient(url="https://lcd.terra.dev", chain_id="columbus-5")
+async def getTotalDepositUSD(terra_client, anchor_market_address):
+    """
+    Function that computes total deposit in Anchor Protocol
 
+    :param terra_client: Terra LCD Client
+    :return number: Total USD value of deposits
+    """
 
-async def getTotalDepositUSD():
     # query data about Anchors's Market-Contract current state
-    response = await terra.wasm.contract_query(ANCHOR_MARKET_ADDRESS, {
+    response = await terra_client.wasm.contract_query(anchor_market_address, {
         "state": {},
     })
 
@@ -29,15 +31,24 @@ async def getTotalDepositUSD():
     return (aterra_supply / 10 ** 6) * exchange_rate
 
 
-async def getBTokenCollateralUSD(bTokenAddress, bTokenAnchorCustodyAddress):
+async def getBTokenCollateralUSD(terra_client, bTokenAddress, bTokenAnchorCustodyAddress):
+    """
+    Function that computes total collateral value for a given bToken (on 28.1.2022 can be either bLUNA or bETH)
+
+    :param terra_client: Terra LCD Client
+    :param str bTokenAddress: Address of bToken smart contract address
+    :param str bTokenAnchorCustodyAddress: Address of Anchor's custody smart contract related to given bToken
+    :return number: USD value of bToken collateral
+    """
+
     # Query bToken contract how much of it is bTokenAnchorCustody contract holding
-    balanceResponse = await terra.wasm.contract_query(bTokenAddress, {
+    balanceResponse = await terra_client.wasm.contract_query(bTokenAddress, {
         "balance": {"address": bTokenAnchorCustodyAddress},
     })
     bTokenBalance = float(balanceResponse["balance"])
 
     # get price usd price of given bToken
-    priceResponse = await terra.wasm.contract_query(ANCHOR_ORACLE_ADDRESS, {
+    priceResponse = await terra_client.wasm.contract_query(ANCHOR_ORACLE_ADDRESS, {
         "price": {
             "base": bTokenAddress,
             "quote": "uusd",
@@ -46,7 +57,7 @@ async def getBTokenCollateralUSD(bTokenAddress, bTokenAnchorCustodyAddress):
     bTokenPrice = float(priceResponse["rate"])
 
     # get token decimals ( in order to compute corresponding USD value properly)
-    tokenInfoResponse = await terra.wasm.contract_query(bTokenAddress, {
+    tokenInfoResponse = await terra_client.wasm.contract_query(bTokenAddress, {
         "token_info": {},
     })
     tokenDecimals = tokenInfoResponse["decimals"]
@@ -55,50 +66,50 @@ async def getBTokenCollateralUSD(bTokenAddress, bTokenAnchorCustodyAddress):
     return bTokenPrice * (bTokenBalance / 10 ** tokenDecimals)
 
 
-async def getTotalCollateralUSD(bTokenAddresses: list, bTokenAnchorCustodyAddresses: list):
+async def getTotalCollateralUSD(terra_client, bTokenAddresses: list, bTokenAnchorCustodyAddresses: list):
+    """
+    Function that computes total collateral value for all tokens passed via parameters
+
+    :param terra_client: Terra LCD Client
+    :param list bTokenAddresses: Addresses of bToken smart contracts
+    :param list bTokenAnchorCustodyAddresses: Addresses of Anchor's custody smart contracts related to bTokens in bTokenAddresses
+    :return number: USD value of total collateral
+    """
+
     totalCollateralUSD = 0
 
     for i in range(len(bTokenAddresses)):
-        collateral = await getBTokenCollateralUSD(bTokenAddresses[i], bTokenAnchorCustodyAddresses[i])
+        collateral = await getBTokenCollateralUSD(terra_client, bTokenAddresses[i], bTokenAnchorCustodyAddresses[i])
         totalCollateralUSD += collateral
 
     return totalCollateralUSD
 
-def formatToPrometheus(tvl, total_deposit, total_collateral):
-    # This is expected:
-    return ("\n# HELP tvl_usd Total USD value locked (collateral + deposit)\n"
-    "# TYPE tvl_usd gauge\n"
-    "tvl_usd {tvl}\n"
-    "# HELP total_deposit_usd USD of all deposits\n"
-    "# TYPE total_deposit_usd gauge\n"
-    "total_deposit_usd {deposit}\n"
-    "# HELP total_collateral_usd USD of all collaterals\n"
-    "# TYPE total_collateral_usd gauge\n"
-    "total_collateral_usd {collateral}\n").format(tvl=tvl, deposit=total_deposit, collateral=total_collateral)
-
 async def main():
-    totalDepositUSD = await getTotalDepositUSD()
+    # Connect to columbus network
+    terra = AsyncLCDClient(url="https://lcd.terra.dev", chain_id="columbus-5")
+
+    # Get metrics
+    totalDepositUSD = await getTotalDepositUSD(terra, ANCHOR_MARKET_ADDRESS)
     collateralBLunaUSD = await getBTokenCollateralUSD(
+        terra,
         BLUNA_ADDRESS,
         ANCHOR_BLUNA_CUSTODY_ADDRESS
     )
     collateralBEthUSD = await getBTokenCollateralUSD(
+        terra,
         BETH_ADDRESS,
         ANCHOR_BETH_CUSTODY_ADDRESS
     )
 
     totalCollateralUSD = collateralBLunaUSD + collateralBEthUSD
 
-    # print("-------------------------------------------")
-    # print("TVL", totalDepositUSD + totalCollateralUSD, "USD")
-    # print("totalDeposit", totalDepositUSD, "USD")
-    # print("totalCollateral", totalCollateralUSD, "USD")
-    # print("collateralBLuna", collateralBLunaUSD, "USD")
-    # print("collateralBEth", collateralBEthUSD, "USD")
-    # print("-------------------------------------------")
+    print("-------------------------------------------")
+    print("TVL", totalDepositUSD + totalCollateralUSD, "USD")
+    print("totalDeposit", totalDepositUSD, "USD")
+    print("totalCollateral", totalCollateralUSD, "USD")
+    print("collateralBLuna", collateralBLunaUSD, "USD")
+    print("collateralBEth", collateralBEthUSD, "USD")
+    print("-------------------------------------------")
 
-    # print in format the Prometheus expects
-    print(formatToPrometheus(totalDepositUSD + totalCollateralUSD, totalDepositUSD, totalCollateralUSD))
-
-# uncomment to run the async main function
-asyncio.get_event_loop().run_until_complete(main())
+# uncomment to run the main() function
+# asyncio.get_event_loop().run_until_complete(main())

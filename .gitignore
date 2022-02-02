@@ -1,4 +1,5 @@
 .vscode
-.DS_Store
 py/prometheus-venv
+py/__pycache__
 js/node_modules
+py/.DS_Store

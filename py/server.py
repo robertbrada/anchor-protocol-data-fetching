@@ -1,35 +1,68 @@
-from prometheus_client import (Gauge, start_http_server)
+#!/usr/bin/env python
+"""
+This example demonstrates how the ``aioprometheus.Service`` can be used to
+expose metrics on a HTTP endpoint.
 
-# Create a metric to track time spent and requests made.
-TOTAL_VALUE_LOCKED = Gauge('tvl_usd', 'Total USD value locked (collateral + deposit)')
-TOTAL_DEPOSIT = Gauge('total_deposit_usd', 'USD value of all deposits')
-TOTAL_COLLATERAL = Gauge('total_collateral_usd', 'USD value of all collaterals')
+Build according to this tutorial: https://github.com/claws/aioprometheus
+"""
 
-def process_tvl():
-    # TODO how to load async data?
-    # tvl = await getTvlUSD()
-    tvl = 1.0
-    TOTAL_VALUE_LOCKED.set(tvl) 
+import asyncio
 
-def process_deposit():
-    # TODO how to load async data?
-    # deposit = await getTotalDepositUSD()
-    deposit = 2.0
-    TOTAL_DEPOSIT.set(deposit) 
+from aioprometheus import Gauge
+from aioprometheus.service import Service
+from terra_sdk.client.lcd import AsyncLCDClient
 
-def process_collateral():
-    # TODO how to load async data?
-    # collateral = await getTotalCollateralUSD()
-    collateral = 3.0
-    TOTAL_COLLATERAL.set(collateral) 
+from data_fetching import getTotalCollateralUSD, getTotalDepositUSD
+
+# Contract addresses (https://docs.anchorprotocol.com/smart-contracts/deployed-contracts)
+ANCHOR_MARKET_ADDRESS = "terra1sepfj7s0aeg5967uxnfk4thzlerrsktkpelm5s"
+ANCHOR_ORACLE_ADDRESS = "terra1cgg6yef7qcdm070qftghfulaxmllgmvk77nc7t"
+ANCHOR_BLUNA_CUSTODY_ADDRESS = "terra1ptjp2vfjrwh0j0faj9r6katm640kgjxnwwq9kn"
+ANCHOR_BETH_CUSTODY_ADDRESS = "terra10cxuzggyvvv44magvrh3thpdnk9cmlgk93gmx2"
+BLUNA_ADDRESS = "terra1kc87mu460fwkqte29rquh4hc20m54fxwtsx7gp"
+BETH_ADDRESS = "terra1dzhzukyezv0etz22ud940z7adyv7xgcjkahuun"
+
+async def main():
+
+    service = Service()
+
+    # Create metrics
+    # You can add optional labels like this: 
+    # TOTAL_DEPOSIT = Gauge('total_deposit_usd', 'USD value of all deposits', const_labels={"host": socket.gethostname()})
+    TOTAL_VALUE_LOCKED = Gauge('tvl_usd', 'Total USD value locked (collateral + deposit)')
+    TOTAL_DEPOSIT = Gauge('total_deposit_usd', 'USD value of all deposits')
+    TOTAL_COLLATERAL = Gauge('total_collateral_usd', 'USD value of all collaterals')
+
+    # Initialize terra client
+    terra = AsyncLCDClient(url="https://lcd.terra.dev", chain_id="columbus-5")
+
+    await service.start(addr="127.0.0.1", port=8000)
+    print(f"Serving prometheus metrics on: {service.metrics_url}")
+
+    # Now start another coroutine to periodically update a metric to
+    # simulate the application making some progress.
+    async def updater(tvlG: Gauge, depositG: Gauge, collateralG: Gauge):
+        while True:
+            totalDepositUSD = await getTotalDepositUSD(terra, ANCHOR_MARKET_ADDRESS)
+            totalCollateralUSD = await getTotalCollateralUSD(
+                terra, 
+                [BLUNA_ADDRESS, BETH_ADDRESS], 
+                [ANCHOR_BLUNA_CUSTODY_ADDRESS, ANCHOR_BETH_CUSTODY_ADDRESS])
+
+            # set the gauge values
+            depositG.set({}, totalDepositUSD)
+            collateralG.set({}, totalCollateralUSD)
+            tvlG.set({}, totalCollateralUSD + totalDepositUSD)
+
+    await updater(TOTAL_VALUE_LOCKED, TOTAL_DEPOSIT, TOTAL_COLLATERAL)
+
+    # Finally stop server
+    await service.stop()
 
 
-if __name__ == '__main__':
-    # Start up the server to expose the metrics.
-    start_http_server(8000)
+if __name__ == "__main__":
 
-    # Generate some requests.
-    while True:
-        process_tvl()
-        process_collateral()
-        process_deposit()
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
