@@ -1,5 +1,5 @@
 # anchor-protocol-data-fetching
-A single script that queries and computes the following data about Anchor Protocol from on-chain available data:
+A series of script that query and compute the following data about Anchor Protocol from on-chain available data:
 - Total Value Locked (USD)
 - Total Deposit (USD)
 - Total Collateral (USD)
@@ -51,6 +51,9 @@ total_deposit_usd 5223343722.043455
 # TYPE tvl_usd gauge
 tvl_usd 8433615320.197608
 ```
+
+<br /> 
+
 
 ## JavaScript version
 
