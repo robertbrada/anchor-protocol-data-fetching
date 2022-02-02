@@ -5,8 +5,8 @@ A single script that queries and computes the following data about Anchor Protoc
 - Total Collateral (USD)
 
 There are two versions - Python and JavaScript. 
-- **Python** version displays data in the browser in the Prometheus-compatible format.
-- **JavaScript** version only prints data to the console.
+- **Python version** displays data in the browser in the Prometheus-compatible format.
+- **JavaScript version** only prints data to the console.
 
 <br /> 
 
@@ -30,7 +30,7 @@ Prometheus: https://prometheus.io/
 
 2. `cd anchor-protocol-data-fetching/py`
 
-3. (consider creating Python virtual environment for this project)
+3. (consider creating [Python virtual environment](https://docs.python.org/3/tutorial/venv.html)  for this project)
 
 4. `pip3 install -r requirements.txt`
 
