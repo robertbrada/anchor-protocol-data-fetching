@@ -20,6 +20,8 @@ Terra Finder: https://finder.terra.money/
 
 Prometheus: https://prometheus.io/
 
+<br /> 
+
 # Run the script
 
 ## Python3 version
